@@ -1,0 +1,77 @@
+# 数据集和训练数据
+archive/
+HAM10000/HAM10000数据集/
+HAM10000/HAM10000标注/
+HAM10000/yolo_dataset
+*.csv
+*.xlsx
+
+# 模型权重文件
+*.pt
+*.pth
+*.pth.tar
+*.onnx
+*.pkl
+pretrained/hub/checkpoints/
+
+# 训练输出和日志
+runs/
+run/
+run/
+logs/
+*.log
+*.logs
+*.tfevents.*
+
+# 缓存文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+cache/
+*.cache
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 数据库文件
+*.sqlite3
+*.db
+
+# 临时文件
+temp_*
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Python虚拟环境
+venv/
+env/
+.env
+
+# Chroma向量数据库
+chroma_db/
+rag/chroma_db/
+
+# 图片和媒体文件
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.mp4
+*.avi
+*.mov
+*.zip
+*.tar
+*.gz
+*.rar
+
+# 配置文件（包含密钥的不要上传）
+# config/secrets.yml

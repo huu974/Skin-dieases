@@ -1,0 +1,202 @@
+"""
+定义皮肤疾病诊断智能体可调用的各种工具函数
+使用@tool装饰器注册为可用工具
+"""
+from ultralytics import YOLO
+
+from utils.logger import logger
+from langchain_core.tools import tool
+from rag.rag_service import VectorStoreService
+import torch
+from torchvision.models import efficientnet_b3, EfficientNet_B3_Weights
+import torch.nn as nn
+from utils.config_handler import model_conf
+from utils.prompt_loader import load_report_prompts
+import os
+from PIL import Image
+import torchvision.transforms as transforms
+from model.PanDerm import MyModel
+from model.yolo_detector import YOLOv10Detector
+import datetime
+
+
+
+yolo_service = None
+classifier_model = None
+rag_service = None
+
+
+
+"""延迟加载YOLO服务"""
+def get_yolo_service():
+    global yolo_service
+    if yolo_service is None:
+        yolo_service = YOLOv10Detector(model_size='n')
+        yolo_service.model = YOLO("E:\\py项目\\Skin diseases\\runs\\detect\\runs\\detect\\train1\\train5\\weights\\best.pt")
+    return yolo_service
+
+
+
+"""延迟加载分类模型"""
+def get_classifier_model():
+    global classifier_model
+    if classifier_model is None:
+        os.environ['TORCH_HOME'] = model_conf.get("save_path", "./pretrained")
+        model = efficientnet_b3(weights=EfficientNet_B3_Weights.IMAGENET1K_V1)
+        
+
+        xiaohui = MyModel(model=model, num_classes=model_conf["num_classes"])
+        classifier_model = xiaohui.model_classsifier()
+        checkpoint = torch.load("E:\\py项目\\Skin diseases\\variables\\best_model.pth.tar",map_location="cpu")
+        classifier_model.load_state_dict(checkpoint["model_state_dict"])
+        classifier_model.eval()
+    return classifier_model
+
+
+
+"""延迟加载RAG服务"""
+def get_rag_service():
+    global rag_service
+    if rag_service is None:
+        rag_service = VectorStoreService()
+    return rag_service
+
+
+# 皮肤病类别标签
+SKIN_DISEASE_CLASSES = [
+    "光化性角化病", "基底细胞癌", "黑色素瘤", "痣", "皮肤纤维瘤",
+    "血管病变", "脂溢性角化病", "脂溢性皮炎", "粟丘疹", "皮脂腺痣",
+    "疣", "寻常痤疮", "银屑病", "扁平苔藓", "花斑癣", "白癜风",
+    "疖疮", "念珠菌病", "体虱", "传染性软疣", "甲真菌病", 
+    "系统性疾病的皮肤表现", "其他皮肤病"
+]
+
+
+@tool(description="使用YOLO模型检测皮肤图像中的皮损区域，返回是否检测到异常皮损")
+def yolo_detect(image_path: str) -> str:
+    """
+    返回:检测结果字符串，包含是否检测到皮损、置信度等信息
+    """
+    try:
+        yolo = get_yolo_service()
+        crops, results = yolo.predict_with_crop(image_path)
+        
+        if results and len(results) > 0:
+            result = results[0]
+            boxes = result.boxes
+            
+            if boxes is not None and len(boxes) > 0:
+                confidence = float(boxes.conf[0]) if len(boxes) > 0 else 0.0
+                return f"检测到皮损区域，异常置信度：{confidence:.2%}，建议进一步分析"
+        
+        return "未检测到明显皮损区域，皮肤状态正常"
+            
+    except Exception as e:
+        logger.error(f"[yolo_detect]检测失败: {e}")
+        return f"检测失败: {str(e)}"
+
+
+@tool(description="使用分类模型对皮肤图像进行疾病分类判断")
+def skin_classify(image_path: str) -> str:
+    """
+    返回:分类结果，包含疾病类型和置信度
+    """
+    try:
+        model = get_classifier_model()
+        
+        # 图像预处理
+        transform = transforms.Compose([
+            transforms.Resize((300, 300)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+        
+        image = Image.open(image_path).convert('RGB')
+        image_tensor = transform(image).unsqueeze(0)
+        
+        # 推理
+        with torch.no_grad():
+            outputs = model(image_tensor)
+            probabilities = torch.softmax(outputs, dim=1)
+            confidence, predicted = torch.max(probabilities, 1)
+        
+        disease = SKIN_DISEASE_CLASSES[predicted.item()]
+        conf = confidence.item()
+        
+        return f"分类结果：{disease}，置信度：{conf:.2%}"
+        
+    except Exception as e:
+        logger.error(f"[skin_classify]分类失败: {e}")
+        return f"分类失败: {str(e)}"
+
+
+@tool(description="根据疾病名称和用户症状从医学知识库检索相关建议")
+def rag_query(query: str) -> str:
+    """
+    query: 查询字符串，包含疾病名称和/或用户症状描述
+    返回:从知识库检索到的相关医学建议
+    """
+
+    try:
+        rag = get_rag_service()
+        retriever = rag.get_retriever()
+        
+        results = retriever.invoke(query)
+        
+        if not results:
+            return "未找到相关医学知识，建议咨询专业医生"
+        
+        # 合并检索结果
+        content = "\n".join([r.page_content for r in results])
+        return content
+        
+    except Exception as e:
+        logger.error(f"[rag_query]检索失败: {e}")
+        return f"检索失败: {str(e)}"
+
+
+@tool(description="生成完整的皮肤疾病诊断报告，包含检测、分类、症状和建议信息")
+def generate_report(detection_result: str, classification_result: str, user_symptoms: str, rag_suggestions: str) -> str:
+    """
+    detection_result: YOLO检测结果
+    classification_result: 分类模型结果
+    user_symptoms: 用户描述的症状
+    rag_suggestions: RAG检索的建议
+    返回:格式化的诊断报告
+    """
+
+    
+    report_template = load_report_prompts()
+    
+    report = f"""
+===============================================
+        皮肤疾病诊断报告
+===============================================
+
+【基本信息】
+- 诊断时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- 检测方式：AI辅助诊断
+
+【图像分析结果】
+{detection_result}
+
+【疾病分类结果】
+{classification_result}
+
+【用户症状】
+{user_symptoms if user_symptoms else '用户提供'}
+
+【医学建议】
+{rag_suggestions}
+
+===============================================
+              免责声明
+===============================================
+本报告由AI系统辅助生成，仅供参考学习，不能替代
+专业皮肤科医生的面诊和诊断。如有身体不适或
+疑虑，请及时前往正规医院皮肤科就诊。
+
+报告编号：{hash(datetime.datetime.now()) % 100000:05d}
+===============================================
+    """
+    return report

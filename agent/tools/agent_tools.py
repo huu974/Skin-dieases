@@ -40,7 +40,8 @@ def get_yolo_service():
 def get_classifier_model():
     global classifier_model
     if classifier_model is None:
-        os.environ['TORCH_HOME'] = model_conf.get("save_path", "./pretrained")
+        pretrained_dir = os.path.join(os.path.dirname(__file__), '..', '..', model_conf.get("save_path", "pretrained"))
+        os.environ['TORCH_HOME'] = pretrained_dir
         model = efficientnet_b3(weights=EfficientNet_B3_Weights.IMAGENET1K_V1)
         
 

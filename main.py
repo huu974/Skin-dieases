@@ -50,8 +50,8 @@ def main():
     train_dataloader = get_train_dataloader(args)
     val_dataloader = get_val_dataloader(args)
 
-    # 获取模型
-    os.environ['TORCH_HOME'] = model_conf["save_path"]
+    # 获取模型 - 统一预训练模型目录
+    os.environ['TORCH_HOME'] = os.path.join(os.path.dirname(__file__), model_conf["save_path"])
     model = efficientnet_b3(weights=EfficientNet_B3_Weights.IMAGENET1K_V1)
     xiaohui = MyModel(model=model,  num_classes=model_conf["num_classes"])
     model = xiaohui.model_classifier().to(device)

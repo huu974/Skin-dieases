@@ -16,14 +16,17 @@ class YOLOv10Detector:
         self.model_size = model_size
         self.weights_path = self._get_weights_path(model_size)
         self.model = YOLO(self.weights_path)
+        self.loaded_checkpoint = None  # 记录是否从checkpoint恢复训练
 
+    # 获取权重路径
     def _get_weights_path(self, model_size):
+        pretrained_dir = os.path.join(os.path.dirname(__file__), '..', 'pretrained')
         weights_map = {
-            'n': 'yolov10n.pt',
-            's': 'yolov10s.pt',
-            'm': 'yolov10m.pt',
-            'l': 'yolov10l.pt',
-            'x': 'yolov10x.pt',
+            'n': os.path.join(pretrained_dir, 'yolov10n.pt'),
+            's': os.path.join(pretrained_dir, 'yolov10s.pt'),
+            'm': os.path.join(pretrained_dir, 'yolov10m.pt'),
+            'l': os.path.join(pretrained_dir, 'yolov10l.pt'),
+            'x': os.path.join(pretrained_dir, 'yolov10x.pt'),
         }
         if model_size not in weights_map:
             raise ValueError('Invalid model size. Please choose from "n", "s", "m", "l", or "x".')
@@ -41,9 +44,36 @@ class YOLOv10Detector:
 
     #训练
     def train(self, data_yaml, epochs, batch_size, lr0, imgsz, project):
-        # 保存当前训练好的模型权重
-        temp_path = 'temp_trained.pt'
-        self.model.save(temp_path)
+        # 判断是否有checkpoint
+        if self.loaded_checkpoint:
+            # 从checkpoint恢复训练
+            checkpoint = torch.load(self.loaded_checkpoint, map_location=self.device, weights_only=False)
+
+
+            # 判断是state_dict格式还是完整模型格式
+            if isinstance(checkpoint, dict) and 'model' in checkpoint:
+                # 是state_dict格式，手动加载
+                #1.获取当前模型的参数字典
+                model_state = self.model.model.state_dict()
+
+                #2.获取checkpoint的参数字典
+                pretrained_state = checkpoint['model']
+
+                #3.遍历checkpoint，找到匹配的参数
+                matched_state = {}
+
+                for k, v in pretrained_state.items():
+                    if k in model_state and v.shape == model_state[k].shape:
+                        matched_state[k] = v
+                #4.加载匹配的参数，参2：允许跳过不匹配的层
+                self.model.model.load_state_dict(matched_state, strict=False)
+            else:
+                # 是完整模型格式
+                self.model = YOLO(self.loaded_checkpoint)
+            self.loaded_checkpoint = None  # 清空，避免后续训练重复加载
+        else:
+            # 无checkpoint：从预训练模型开始训练
+            self.model = YOLO(self.weights_path)
         
         # 训练
         result = self.model.train(
@@ -55,15 +85,12 @@ class YOLOv10Detector:
             project=project,
             amp=False
         )
-        
-        # 训练后重新加载模型
-        self.model = YOLO(temp_path)
-        
+
         return result
 
-    #验证
-    def val(self, data_yaml=None):
-        return self.model.val(data=data_yaml, device=self.device)
+    # #验证
+    # def val(self, data_yaml=None):
+    #     return self.model.val(data=data_yaml, device=self.device)
 
 
 
@@ -109,6 +136,7 @@ class YOLOv10Detector:
 
     #加载模型
     def load(self, weights_path):
+        self.loaded_checkpoint = weights_path  # 记录加载了checkpoint
         # 尝试用YOLO直接加载（适用于best.pt格式，用于推理）
         try:
             self.model = YOLO(weights_path)
@@ -132,21 +160,8 @@ class YOLOv10Detector:
                 matched_state[k] = v
         self.model.model.load_state_dict(matched_state, strict=False)
         return checkpoint.get('epoch', 0)
-        # checkpoint = torch.load(weights_path, map_location=device,weights_only=False)
-        #
-        # model_state = self.model.model.state_dict()
-        # pretrained_state = checkpoint['model']
-        #
-        # matched_state = {}
-        # for k, v in pretrained_state.items():
-        #     if k in model_state and v.shape == model_state[k].shape:
-        #         matched_state[k] = v
-        #
-        # self.model.model.load_state_dict(matched_state, strict=False)
-        #
-        # return checkpoint.get('epoch', 0)
-        self.model = YOLO(weights_path)
-        return 0
+
+
 
     #冻结层,冻结前num_layers层
     def freeze_layers(self,num_layers):

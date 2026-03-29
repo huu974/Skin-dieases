@@ -6,7 +6,7 @@ import os
 import json
 from agent.react_agent import SkinDiagnosisAgent
 from utils.logger import logger
- 
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 HISTORY_FILE = "conversation_history.json"

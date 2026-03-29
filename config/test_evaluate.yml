@@ -1,5 +1,5 @@
 classification_model: "variables/best_model.pth.tar"
-yolo_model: "runs/detect/runs/detect/20260327-211818/train/weights/best.pt"
+yolo_model: "yolo_variables/checkpoint_yolo.pt"
 
 test_data: "archive/test"
 

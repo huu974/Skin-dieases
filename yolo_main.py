@@ -95,23 +95,11 @@ def main():
             imgsz=640,
             project=f'runs/detect/{datetime.now().strftime("%Y%m%d-%H%M%S")}',
         )
-        tra_loss = tra_results.box.loss if hasattr(tra_results.box, 'loss') else tra_results.box.mp
-        tra_acc = tra_results.box.mp
-        writer.add_scalar('Train/Loss', tra_loss, epoch)
-        writer.add_scalar('Train/Accuracy', tra_acc, epoch)
-
-
-        print(f'训练：损失:{tra_loss:.4f} 精度:{tra_acc:.4f}\n')
-
-        #9验证一个epoch
-        print("正在验证...")
-        val_results = detector.val(data_yaml="E:\\py项目\\Skin diseases\\HAM10000\\yolo_dataset\\data.yaml")
-        val_loss = val_results.box.loss if hasattr(val_results.box, 'loss') else val_results.box.mp
-        val_acc = val_results.box.mp
-        writer.add_scalar('Val/Loss', val_loss, epoch)
-        writer.add_scalar('Val/Accuracy', val_acc, epoch)
-
-        print(f'验证：损失:{val_loss:.4f} 精度:{val_acc:.4f}\n')
+        val_acc = tra_results.box.mp
+        val_map = tra_results.box.map
+        writer.add_scalar('Val/mAP50', val_acc, epoch)
+        writer.add_scalar('Val/mAP50-95', val_map, epoch)
+        print(f'验证：mAP50:{val_acc:.4f} mAP50-95:{val_map:.4f}\n')
 
         #11.保存模型
         save_path = f'{opts.save_path}/checkpoint.pt'

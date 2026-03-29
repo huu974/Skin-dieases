@@ -164,7 +164,7 @@ def main(model):
 
 
 if __name__ == '__main__':
-    os.environ['TORCH_HOME'] = model_conf["save_path"]
+    os.environ['TORCH_HOME'] = os.path.join(os.path.dirname(__file__), model_conf["save_path"])
     model = efficientnet_b3(weights=EfficientNet_B3_Weights.IMAGENET1K_V1)
     xiaohui = MyModel(model=model, num_classes=model_conf["num_classes"])
     model = xiaohui.model_classifier().to(device)

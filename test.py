@@ -128,22 +128,24 @@ def test_yolo_classifier(image_path):
 
     #测试开始
     model.eval()
-    #对每个裁剪区进行分类
     print(f'检测到{len(crops)}个皮损区域，开始进行分类...')
 
-    for i,crop_img in enumerate(crops):
-        #图片预处理
-        crop_img_pil = Image.fromarray(crop_img)
-        crop_tensor = transform(crop_img_pil).unsqueeze(0).to(device)
+    # 获取YOLO检测置信度
+    boxes = results[0].boxes
+    yolo_conf = boxes[0].conf[0].item() if boxes is not None and len(boxes) > 0 else 0
 
-        with torch.no_grad():
-            outputs = model(crop_tensor)
-            proabilities = torch.softmax(outputs, dim=1)
-            confidence,pred = torch.max(proabilities, 1)
+    # 用原图分类（而不是裁剪区域），保持和直接分类一致
+    original_img = Image.open(image_path).convert('RGB')
+    original_tensor = transform(original_img).unsqueeze(0).to(device)
 
+    with torch.no_grad():
+        outputs = model(original_tensor)
+        proabilities = torch.softmax(outputs, dim=1)
+        confidence,pred = torch.max(proabilities, 1)
 
-        diease = test_evaluate_conf['class_names'][pred.item()]
-        print(f'区域{i+1}：分类结果：{diease}，置信度：{confidence.item():.2%}')
+    diease = test_evaluate_conf['class_names'][pred.item()]
+    print(f'检测置信度：{yolo_conf:.2%}')
+    print(f'分类结果：{diease}，置信度：{confidence.item():.2%}')
 
     return results
 

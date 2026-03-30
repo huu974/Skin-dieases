@@ -8,8 +8,8 @@ import random
 
 #获取验证集 ->就是在训练集的基础上随机选择一部分作为验证集
 def split_dataset(source_dir, val_ratio=0.2):
-    train_dir = 'archive/train-new'
-    val_dir = 'archive/val'
+    train_dir = 'skin diseases/train-new'
+    val_dir = 'skin diseases/val'
 
     os.makedirs(train_dir, exist_ok=True)
     os.makedirs(val_dir, exist_ok=True)
@@ -48,4 +48,4 @@ def split_dataset(source_dir, val_ratio=0.2):
 
 
 if __name__ == '__main__':
-    split_dataset('archive/train', val_ratio=0.2)
+    split_dataset('skin diseases/train', val_ratio=0.2)

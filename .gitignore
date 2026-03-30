@@ -1,5 +1,5 @@
 # 数据集和训练数据
-archive/
+skin diseases/
 HAM10000/HAM10000数据集/
 HAM10000/HAM10000标注/
 HAM10000/yolo_dataset

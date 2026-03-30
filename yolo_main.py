@@ -36,9 +36,11 @@ def main():
 
     #5.训练与验证
     last_weights = None
+    best_map = 0.0
     
     # 判断是否resume：命令行参数优先
     checkpoint_path = f'{opts.save_path}/checkpoint.pt'
+    checkpoint_yolo_path = f'{opts.save_path}/checkpoint_yolo.pt'
     do_resume = str(opts.yolo_resume).lower() not in ('false', '0', '')
     if do_resume and os.path.exists(checkpoint_path):
         last_weights = checkpoint_path
@@ -66,9 +68,19 @@ def main():
         #8保存模型
         checkpoint_path = f'{opts.save_path}/checkpoint.pt'
         checkpoint_yolo_path = f'{opts.save_path}/checkpoint_yolo.pt'
+        
+        # 保存最后一个 epoch 的权重
         detector.save(checkpoint_path, epoch=epoch)
-        detector.save(checkpoint_yolo_path, epoch=epoch)
-        print(f'模型已保存到{checkpoint_path} 和 {checkpoint_yolo_path}')
+        
+        # 只保存最佳模型
+        if val_map > best_map:
+            best_map = val_map
+            detector.save(checkpoint_yolo_path, epoch=epoch)
+            print(f'✓ 最佳模型已更新! mAP50-95: {best_map:.4f}')
+        else:
+            print(f'模型精度未提升，当前最佳: {best_map:.4f}')
+        
+        print(f'模型已保存到{checkpoint_path}')
         
         # 更新last_weights，用于下次epoch继续训练
         last_weights = checkpoint_path

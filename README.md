@@ -8,7 +8,7 @@
 Skin diseases/
 ├── HAM10000/          # HAM10000 数据集
 ├── agent/             # Agent 相关代码
-├── archive/           # 归档文件
+├── skin diseases/    # 皮肤病数据集
 ├── chroma_db/         # Chroma 向量数据库
 ├── config/            # 配置文件
 ├── data/              # 数据目录

@@ -1,7 +1,7 @@
 # 数据路径
-datapath-train: ./archive/train-new
-datapath-val: ./archive/val
-datapath-test: ./archive/test
+datapath-train: ./skin diseases/train-new
+datapath-val: ./skin diseases/val
+datapath-test: ./skin diseases/test
 
 # 训练参数
 batch-size: 16

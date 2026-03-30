@@ -23,7 +23,7 @@ from model.PanDerm import MyModel
 from utils.config_handler import model_conf
 
 
-TEST_DATA_PATH = './archive/val'  # 验证集路径
+TEST_DATA_PATH = './skin diseases/val'  # 验证集路径
 MODEL_PATH = './variables/best_model.pth.tar'  # 模型权重路径
 CLASSES = [
     'Acne and Rosacea Photos',

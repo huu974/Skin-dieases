@@ -130,7 +130,7 @@ def test_yolo_classifier(image_path,save_box_image,model_name='efficientnet_b3')
     #检测并返回坐标和带框图片
     results,coordinates = yolo.predict_with_box(
         image_path,
-        conf=0.25,
+        conf=0.20,
         save_path=save_box_image
     )
     result = results[0]
@@ -184,7 +184,19 @@ def test_yolo_classifier(image_path,save_box_image,model_name='efficientnet_b3')
 
 
 
-#4.随机从测试集随机选择一张图片进行测试
+#4.随机从YOLO数据集选择一张图片
+def get_random_yolo_image(dataset_type='val'):
+    yolo_folder = os.path.join(os.path.dirname(__file__), 'HAM10000', 'yolo_dataset', 'images')
+    image_folder = os.path.join(yolo_folder, dataset_type)
+    
+    images = [f for f in os.listdir(image_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+    random_image = random.choice(images)
+    image_path = os.path.join(image_folder, random_image)
+    
+    return image_path, random_image
+
+
+#5.随机从测试集随机选择一张图片进行测试
 def get_random_test_image(test_folder=test_evaluate_conf['test_data']):
     #获取所有类别文件夹
     classes = [ d for d in os.listdir(test_folder) if os.path.isdir(os.path.join(test_folder, d))]
@@ -207,9 +219,15 @@ def get_random_test_image(test_folder=test_evaluate_conf['test_data']):
 if __name__ == '__main__':
      device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
      print(f'使用设备：{device}')
-     test_image,true_class = get_random_test_image()
-     print(f'测试图片路径：{test_image}')
-     print(f'真实类别：{true_class}')
+
+
+     # test_image,true_class = get_random_test_image()
+     # print(f'测试图片路径：{test_image}')
+     # print(f'真实类别：{true_class}')
+
+
+
+     test_image,_ = get_random_yolo_image()
      #1.测试分类模型
      pred_classifier, conf_classifier = test_classifier(test_image)
 
